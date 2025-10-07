@@ -67,6 +67,7 @@ const sharp = require("sharp")
 const moment = require('moment-timezone')
 const pino = require("pino")
 const chalk = require("chalk")
+const jimp = require("jimp")
 const { createCanvas, loadImage } = require("canvas")
 const UglifyJS = require("uglify-js");
 const fetch = require("node-fetch")
@@ -78,6 +79,8 @@ const { addPremiumUser, delPremiumUser, setPublic, isPublic } = require("./lib/p
 //============
 module.exports = async (conn, m, chatUpdate, store) => {
 try {
+const body = (m.mtype === 'conversation' && m.message.conversation) ? m.message.conversation : (m.mtype == 'imageMessage') && m.message.imageMessage.caption ? m.message.imageMessage.caption : (m.mtype == 'documentMessage') && m.message.documentMessage.caption ? m.message.documentMessage.caption : (m.mtype == 'videoMessage') && m.message.videoMessage.caption ? m.message.videoMessage.caption : (m.mtype == 'extendedTextMessage') && m.message.extendedTextMessage.text ? m.message.extendedTextMessage.text : (m.mtype == 'buttonsResponseMessage' && m.message.buttonsResponseMessage.selectedButtonId) ? m.message.buttonsResponseMessage.selectedButtonId : (m.mtype == 'interactiveResponseMessage') ? JSON.parse(m.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson).id : (m.mtype == 'templateButtonReplyMessage') && m.message.templateButtonReplyMessage.selectedId ? m.message.templateButtonReplyMessage.selectedId : ""
+//============
 const prefix = ''
 const isCmd = body.startsWith(prefix)
 const quoted = m.quoted ? m.quoted : m
@@ -102,11 +105,28 @@ const isBotPublic = isPublic();
 if (!isBotPublic && !isAccess) return;
 console.log(`\x1b[35m[ PESAN ]\x1b[0m \x1b[36m${m.body || m.mtype}\x1b[0m Dari \x1b[33m${m.pushName}\x1b[0m`);
 //============
-const second = fs.readFileSync("./system/media/second.jpg")
-const thumb = fs.readFileSync("./system/media/thumb.jpg")
-const reply = fs.readFileSync("./system/media/reply.jpg")
+const second = fs.readFileSync("./system/lib/media/second.jpg")
+const thumb = fs.readFileSync("./system/lib/media/thumb.jpg")
+const reply = fs.readFileSync("./system/lib/media/reply.jpg")
 //============
-const qlive = {key: {participant: '0@s.whatsapp.net', ...(m.chat ? {remoteJid: `status@broadcast`} : {})}, message: {liveLocationMessage: {caption: `Name: ${pushname}\nCommand: ${command}`,jpegThumbnail: second}}}
+const resize = async (image, width, height) => {
+let oyy = await jimp.read(image)
+let kiyomasa = await oyy.resize(width, height).getBufferAsync(jimp.MIME_JPEG)
+    return kiyomasa
+}
+//============
+const FakeLocation = {
+key: {
+participant: '0@s.whatsapp.net',
+...(m.chat ? { remoteJid: 'status@broadcast' } : {})
+},
+message: {
+locationMessage: {
+name: `Name: ${pushname}\nCommand ${command}`,
+jpegThumbnail: ''
+}
+}
+}
 //============
 const Reply = async (teks) => {
 return conn.sendMessage(m.chat, {text: teks, mentions: [m.sender], contextInfo: {
@@ -115,23 +135,23 @@ title: "Fvckers",
 body: `Swiper Fvck`, 
 thumbnailUrl: reply, 
 sourceUrl: "https://t.me/SwiperFvck2", 
-}}}, {quoted: qlive})
+}}}, {quoted: FakeLocation})
 }
 //============
 switch(command) {
 case 'public': {
-if (!isAccess) return Reply(mess.owner);
+if (!isAccess) return Reply(msg.owner);
 if (isPublic()) return Reply("It's been public for a while now");
 setPublic(true);
-Reply(mess.succes);
+Reply(msg.succes);
 }
 break;
 //============
 case 'self': {
-if (!isAccess) return Reply(mess.owner);
+if (!isAccess) return Reply(msg.owner);
 if (!isPublic()) return Reply("It's been self for a while now");
 setPublic(false);
-Reply(mess.succes);
+Reply(msg.succes);
 }
 break;
 //============
@@ -147,33 +167,65 @@ Your Name: *${pushname}*
 Your Number: *${m.sender.split('@')[0]}*
 Your Status: ${isAccess ? '*Owner*' : '*Free*'}
 `
-const buttons = [{ 
-buttonId: 'allmenu', 
-buttonText: { displayText: 'All Feature' }, 
-type: 1 
+let msg = generateWAMessageFromContent(m.chat, {
+viewOnceMessage: {
+message: {
+messageContextInfo: {
+deviceListMetadata: {},
+deviceListMetadataVersion: 2
+},
+interactiveMessage: proto.Message.InteractiveMessage.create({
+body: proto.Message.InteractiveMessage.Body.create({
+text: mekkk
+}),
+footer: proto.Message.InteractiveMessage.Footer.create({
+text: "Base Bot Fvckers"
+}),
+header: proto.Message.InteractiveMessage.Header.create({
+...(await prepareWAMessageMedia({
+image: {
+url: "https://files.catbox.moe/s3n7n2.jpg"
+}
+}, {
+upload: conn.waUploadToServer
+})),
+title: ``,
+gifPlayback: true,
+subtitle: 'Bot WhatsApp',
+hasMediaAttachment: false
+}),
+nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+buttons: [{
+name: 'single_select',
+buttonParamsJson: JSON.stringify({
+title: 'Select Menu',
+sections: [{
+title: '',
+highlight_label: "<!>",
+rows: [{ 
+header: 'All Menu', 
+title: 'Show All Features', 
+description: '', 
+id: `allmenu`
+}],
+}],
+}),
 },
 {
-name: 'cta_url',
+name: "cta_url",
 buttonParamsJson: JSON.stringify({
-display_text: 'Developer',
-url: 'https://t.me/SwiperFvck2'
-})
+display_text: "[ WhatsApp ]",
+url: `https://wa.me/6282120820483`,
+}),
 },
-{ 
-name: 'cta_url',
+{
+name: "cta_url",
 buttonParamsJson: JSON.stringify({
-display_text: 'Channel',
-url: 'https://t.me/aboutfvckers'
-})
-}]
-
-const buttonMessage = {
-image: thumb,
-caption: mekkk,
-footer: "Base WhatsApp",
-buttons: buttons,
-headerType: 4,
-viewOnce: true,
+display_text: "[ Telegram ]",
+url: `https://t.me/SwiperFvck2`,
+}),
+}],
+}),
 contextInfo: {
 forwardingScore: 1,
 isForwarded: true,
@@ -185,15 +237,22 @@ newsletterJid: `120363418557093738@newsletter`,
 externalAdReply: {
 title: `Base - 3.0.0`,
 body: `Developed By SwiperFvck`,
-thumbnail: second,
+thumbnail: fs.readFileSync("./system/lib/media/second.jpg"),
 sourceUrl: `https://t.me/SwiperFvck2`,
 mediaType: 1,
 renderLargerThumbnail: false
 }
 }
-}
+}),
+},
+},
+}, {
+quoted: FakeLocation
+});
 
-await conn.sendMessage(m.chat, buttonMessage, { quoted: qlive })
+await conn.relayMessage(msg.key.remoteJid, msg.message, {
+messageId: msg.key.id
+});
 }
 break
 //============
@@ -204,33 +263,55 @@ Your Number: *${m.sender.split('@')[0]}*
 Your Status: ${isAccess ? '*Owner*' : '*Free*'}
 
 Feature:
-  * addprem
-  * delplrem
-  * self
-  * public
+  - addprem
+  - delplrem
+  - self
+  - public
 `
-const buttons = [{
-name: 'cta_url',
-buttonParamsJson: JSON.stringify({
-display_text: 'Developer',
-url: 'https://t.me/SwiperFvck2'
-})
+let msg = generateWAMessageFromContent(m.chat, {
+viewOnceMessage: {
+message: {
+messageContextInfo: {
+deviceListMetadata: {},
+deviceListMetadataVersion: 2
 },
-{ 
-name: 'cta_url',
+interactiveMessage: proto.Message.InteractiveMessage.create({
+body: proto.Message.InteractiveMessage.Body.create({
+text: mekkk
+}),
+footer: proto.Message.InteractiveMessage.Footer.create({
+text: "Base Bot Fvckers"
+}),
+header: proto.Message.InteractiveMessage.Header.create({
+...(await prepareWAMessageMedia({
+image: {
+url: "https://files.catbox.moe/s3n7n2.jpg"
+}
+}, {
+upload: conn.waUploadToServer
+})),
+title: ``,
+gifPlayback: true,
+subtitle: 'Bot WhatsApp',
+hasMediaAttachment: false
+}),
+nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+buttons: [
+{
+name: "cta_url",
 buttonParamsJson: JSON.stringify({
-display_text: 'Channel',
-url: 'https://t.me/aboutfvckers'
-})
-}]
-
-const buttonMessage = {
-image: thumb,
-caption: mekkk,
-footer: "Base WhatsApp",
-buttons: buttons,
-headerType: 4,
-viewOnce: true,
+display_text: "[ WhatsApp ]",
+url: `https://wa.me/6282120820483`,
+}),
+},
+{
+name: "cta_url",
+buttonParamsJson: JSON.stringify({
+display_text: "[ Telegram ]",
+url: `https://t.me/SwiperFvck2`,
+}),
+}],
+}),
 contextInfo: {
 forwardingScore: 1,
 isForwarded: true,
@@ -242,20 +323,27 @@ newsletterJid: `120363418557093738@newsletter`,
 externalAdReply: {
 title: `Base - 3.0.0`,
 body: `Developed By SwiperFvck`,
-thumbnail: second,
+thumbnail: fs.readFileSync("./system/lib/media/second.jpg"),
 sourceUrl: `https://t.me/SwiperFvck2`,
 mediaType: 1,
 renderLargerThumbnail: false
 }
 }
-}
+}),
+},
+},
+}, {
+quoted: FakeLocation
+});
 
-await conn.sendMessage(m.chat, buttonMessage, { quoted: qlive })
+await conn.relayMessage(msg.key.remoteJid, msg.message, {
+messageId: msg.key.id
+});
 }
 break
 //============
 case "addprem": {
-if (!isAccess) return Reply(mess.owner);
+if (!isAccess) return Reply(msg.owner);
 if (!text) return Reply(`❌ Example: ${prefix + command} (number)`);
 let user = text.replace(/[^\d]/g, "");
 addPremiumUser(user, 30);
@@ -263,7 +351,7 @@ Reply(`✅ Added Premium:\n• ${user} (30 days)`)}
 break;
 //============
 case "delprem": {
-if (!isAccess) return Reply(mess.owner);
+if (!isAccess) return Reply(msg.owner);
 if (!text) return Reply(`❌ Example: ${prefix + command} (number)`);
 const user = text.replace(/[^\d]/g, "");
 const removed = delPremiumUser(user);
