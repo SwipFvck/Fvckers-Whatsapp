@@ -39,7 +39,7 @@ Fvckers/
 
 1. Clone repository:
 ```bash
-git clone https://github.com/SwiperFvck/Fvckers-Whatsapp.git
+git clone https://github.com/SwipFvck/Fvckers-Whatsapp.git
 cd Fvckers
 ```
 
@@ -57,7 +57,7 @@ npm start
 
 ## 💗 Credits
 
-> Fvckers v3 developed by [Swiper Fvck](https://github.com/SwiperFvck) as a powerful yet simple open-source WhatsApp bot base.
+> Fvckers v3 developed by [Swiper Fvck](https://github.com/SwipFvck) as a powerful yet simple open-source WhatsApp bot base.
 
 ---
 
